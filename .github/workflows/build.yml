@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.21'
 
@@ -34,11 +34,20 @@ jobs:
         run: |
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yalla_tls_linux yalla_tls.go
 
-      - name: Upload
-        uses: actions/upload-artifact@v3
+      - name: Upload ARM64
+        uses: actions/upload-artifact@v4
         with:
-          name: yalla-tls-binaries
-          path: |
-            yalla_tls_arm64
-            yalla_tls_arm
-            yalla_tls_linux
+          name: yalla-tls-arm64
+          path: yalla_tls_arm64
+
+      - name: Upload ARM
+        uses: actions/upload-artifact@v4
+        with:
+          name: yalla-tls-arm
+          path: yalla_tls_arm
+
+      - name: Upload Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: yalla-tls-linux
+          path: yalla_tls_linux
