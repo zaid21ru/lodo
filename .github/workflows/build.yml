@@ -17,34 +17,19 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Init Module
-        run: |
-          go mod init yalla_tls || true
-          go get github.com/refraction-networking/utls
-
       - name: Build Android ARM64
         run: |
-          GOOS=android GOARCH=arm64 CGO_ENABLED=0 go build -o yalla_tls_arm64 yalla_tls.go
+          GOOS=android GOARCH=arm64 CGO_ENABLED=0 go build -v -o yalla_tls_arm64 yalla_tls.go
 
-      - name: Build Android ARM
+      - name: Build Linux x86_64
         run: |
-          GOOS=android GOARCH=arm CGO_ENABLED=0 go build -o yalla_tls_arm yalla_tls.go
-
-      - name: Build Linux
-        run: |
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yalla_tls_linux yalla_tls.go
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v -o yalla_tls_linux yalla_tls.go
 
       - name: Upload ARM64
         uses: actions/upload-artifact@v4
         with:
           name: yalla-tls-arm64
           path: yalla_tls_arm64
-
-      - name: Upload ARM
-        uses: actions/upload-artifact@v4
-        with:
-          name: yalla-tls-arm
-          path: yalla_tls_arm
 
       - name: Upload Linux
         uses: actions/upload-artifact@v4
