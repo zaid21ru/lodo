@@ -1,0 +1,44 @@
+name: Build Yalla TLS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Init Module
+        run: |
+          go mod init yalla_tls || true
+          go get github.com/refraction-networking/utls
+
+      - name: Build Android ARM64
+        run: |
+          GOOS=android GOARCH=arm64 CGO_ENABLED=0 go build -o yalla_tls_arm64 yalla_tls.go
+
+      - name: Build Android ARM
+        run: |
+          GOOS=android GOARCH=arm CGO_ENABLED=0 go build -o yalla_tls_arm yalla_tls.go
+
+      - name: Build Linux
+        run: |
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yalla_tls_linux yalla_tls.go
+
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: yalla-tls-binaries
+          path: |
+            yalla_tls_arm64
+            yalla_tls_arm
+            yalla_tls_linux
