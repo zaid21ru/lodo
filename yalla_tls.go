@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/md5"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -12,8 +13,6 @@ import (
 	"io"
 	"os"
 	"time"
-
-	utls "github.com/refraction-networking/utls"
 )
 
 var rsaPubKeyB64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAik19fj8zJnG7Ub50NvgLObo7KWkEQgXd7AcK9KsIETw/IvCsNc3SsbZqK9qpb+Ulv4kKMe1L6249+3fMLLzSpLtsb2k0cyRk3eKW0uyj8483HI2iSvAr1DIgNzvUXMbIAXSizw4IMQAejUKRbLh4w+lKVWU/6nSuMZNhpzswNPJqegItrEhIRK0tQ78W0lhFCvS3ggRbbFN7Oh/CNM843ZvS9tiFPS66kmmjimxxyAXKAPXvuMfJ9wuLXdkeBob87uGV16yW74835pux0GSRbHSmsNaZiZ5KJBkSEOE1HDsaYiSUQz3ByGGBnw9nah91ZnXxYuk55JvWcyg+Wuv9RwIDAQAB"
@@ -70,13 +69,13 @@ func buildPayload(mobile, password string) (map[string]string, string) {
 	baseParamB64 := aesEncryptB64(aesKey, baseParamBytes)
 
 	headers := map[string]string{
-		"User-Agent":       "YallaLudoHD-Android-187853807",
-		"Accept":           "*/*",
-		"Content-Type":     "application/json",
-		"BlowFishString":   aesKeyB64,
-		"BaseParamString":  baseParamB64,
-		"Version":          "1.2.0.2",
-		"X-Unity-Version":  "2022.3.62f2c1",
+		"User-Agent":      "YallaLudoHD-Android-187853807",
+		"Accept":          "*/*",
+		"Content-Type":    "application/json",
+		"BlowFishString":  aesKeyB64,
+		"BaseParamString": baseParamB64,
+		"Version":         "1.2.0.2",
+		"X-Unity-Version": "2022.3.62f2c1",
 	}
 
 	body := `{"paramJsonString":"` + paramJSON + `"}`
@@ -85,7 +84,7 @@ func buildPayload(mobile, password string) (map[string]string, string) {
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Println(`{"error":"usage: yalla_tls <mobile> <password> [proxy]"}`)
+		fmt.Println(`{"error":"usage: yalla_tls <mobile> <password>"}`)
 		return
 	}
 
@@ -94,27 +93,24 @@ func main() {
 
 	headers, body := buildPayload(mobile, password)
 
-	config := &utls.Config{
+	// ═══ TLS Connection (stdlib فقط — بدون utls) ═══
+	config := &tls.Config{
 		InsecureSkipVerify: true,
 		ServerName:         "account.yalla.games",
+		MinVersion:         tls.VersionTLS12,
+		MaxVersion:         tls.VersionTLS13,
 	}
 
-	// ═══ بصمة Chrome (utls) ═══
-	helloID := utls.HelloChrome_Auto
-
 	t0 := time.Now()
-	conn, err := utls.Dial("tcp", "account.yalla.games:443", config)
+	conn, err := tls.Dial("tcp", "account.yalla.games:443", config)
 	if err != nil {
-		result := map[string]interface{}{
-			"error": err.Error(),
-		}
+		result := map[string]interface{}{"error": err.Error()}
 		out, _ := json.Marshal(result)
 		fmt.Println(string(out))
 		return
 	}
 	defer conn.Close()
 
-	// ═══ إرسال HTTP request ═══
 	req := "POST /YallaGame/V2/AccountRelation/LoginByMobilePwd HTTP/1.1\r\n"
 	req += "Host: account.yalla.games\r\n"
 	for k, v := range headers {
@@ -126,7 +122,6 @@ func main() {
 
 	conn.Write([]byte(req))
 
-	// ═══ قراءة الرد ═══
 	resp, _ := io.ReadAll(conn)
 	elapsed := time.Since(t0).Milliseconds()
 
@@ -135,7 +130,6 @@ func main() {
 		"body":    string(resp),
 		"elapsed": elapsed,
 		"alpn":    conn.ConnectionState().NegotiatedProtocol,
-		"utls":    helloID.Str(),
 	}
 	out, _ := json.Marshal(result)
 	fmt.Println(string(out))
